@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Bebas_Neue, Syne, DM_Sans } from "next/font/google";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import "./globals.css";
 
 const bebasNeue = Bebas_Neue({
@@ -26,16 +27,24 @@ const dmSans = DM_Sans({
 export const metadata: Metadata = {
   title: "Reframe — Resize, trim, and export videos in your browser",
   description: "Free, open-source video editor that runs entirely in your browser. No login, no uploads, no ads. Resize for any platform, trim, rotate, adjust speed, and export.",
-  icons: {
-    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
-    shortcut: "/favicon.svg",
-  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${bebasNeue.variable} ${syne.variable} ${dmSans.variable}`}>
-      <body>{children}</body>
+      <body>
+        <ErrorBoundary>
+          <header>
+            <h1>Reframe</h1>
+          </header>
+
+          {children}
+
+          <footer>
+            <p>© 2026 Reframe</p>
+          </footer>
+        </ErrorBoundary>
+      </body>
     </html>
   );
 }
