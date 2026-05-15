@@ -20,9 +20,9 @@ export default function ExportSettings({
   onChange,
 }: Props) {
   const label =
-    recipe.quality <= 20
+    recipe.quality <= 21
       ? "High"
-      : recipe.quality <= 24
+      : recipe.quality <= 25
         ? "Balanced"
         : "Small file";
 
