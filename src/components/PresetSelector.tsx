@@ -84,6 +84,8 @@ const handleHeightChange = useCallback((h: number) => {
               key={preset.id}
               onClick={() => onChange({ preset: preset.id })}
               title={`${preset.label} — ${preset.width}×${preset.height} — ${getOrientationLabel(preset.width, preset.height)}`}
+              aria-label={`Select ${preset.label} preset, ${preset.width} by ${preset.height} pixels`}
+              aria-pressed={active}
               className={cn(
                 "min-h-[44px] min-w-[44px] flex items-center gap-2.5 p-3 rounded-lg border text-left transition-all duration-150 cursor-pointer hover:scale-[1.02] active:scale-[0.98]",
                 active
@@ -110,6 +112,8 @@ const handleHeightChange = useCallback((h: number) => {
         <button
           type="button"
           title="Custom — Set your own dimensions"
+          aria-label="Select custom dimensions preset"
+          aria-pressed={recipe.preset === "custom"}
           onClick={() => onChange({ preset: "custom" })}
           className={cn(
             "min-h-[44px] min-w-[44px] flex items-center gap-2.5 p-3 rounded-lg border text-left transition-all duration-150 cursor-pointer hover:scale-[1.02] active:scale-[0.98]",

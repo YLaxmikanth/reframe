@@ -57,11 +57,9 @@ export default function ExportSettings({
         max={30}
         step={1}
         value={recipe.quality}
-        onChange={(e) =>
-          onChange({
-            quality: Number(e.target.value),
-          })
-        }
+        onChange={(e) => onChange({ quality: Number(e.target.value) })}
+        aria-label="Video export quality (CRF)"
+        aria-valuetext={`${label} quality, CRF value ${recipe.quality}`}
         className="w-full accent-film-600 cursor-pointer"
       />
 
