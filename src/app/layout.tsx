@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Bebas_Neue, Syne, DM_Sans } from "next/font/google";
-import ErrorBoundary from "@/components/ErrorBoundary";
 import "./globals.css";
 
 const bebasNeue = Bebas_Neue({
@@ -33,17 +32,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${bebasNeue.variable} ${syne.variable} ${dmSans.variable}`}>
       <body>
-        <ErrorBoundary>
-          <header>
-            <h1>Reframe</h1>
-          </header>
-
+          <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-white focus:text-black">
+            Skip to main content
+          </a>
+        <header>
+          <h1>Reframe</h1>
+        </header>
+        <main id="main-content">
           {children}
-
-          <footer>
-            <p>© 2026 Reframe</p>
-          </footer>
-        </ErrorBoundary>
+        </main>
+        <footer>
+          <p>© 2026 Reframe</p>
+        </footer>
       </body>
     </html>
   );
