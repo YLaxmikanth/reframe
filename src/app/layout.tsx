@@ -38,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <header>
           <h1>Reframe</h1>
         </header>
-        <main id="main-content">
+        <main id="main-content" tabIndex={-1}>
           {children}
         </main>
         <footer>
