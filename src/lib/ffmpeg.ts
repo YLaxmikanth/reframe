@@ -61,7 +61,9 @@ function buildVideoFilter(recipe: EditRecipe, targetW: number, targetH: number):
     const pts = (1 / recipe.speed).toFixed(4);
     filters.push(`setpts=${pts}*PTS`);
   }
-
+  filters.push(
+  `eq=brightness=${recipe.brightness}:contrast=${recipe.contrast}:saturation=${recipe.saturation}`
+);
   return filters.join(",");
 }
 

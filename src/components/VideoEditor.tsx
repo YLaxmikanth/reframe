@@ -49,6 +49,7 @@ export default function VideoEditor() {
     handleFileSelect, handleExport, cancelExport, reset,
   } = useVideoEditor();
 
+  
   const isProcessing = status === "loading-engine" || status === "exporting";
 
   return (
@@ -112,6 +113,102 @@ export default function VideoEditor() {
                 </div>
                 <div className="bg-[var(--surface)] rounded-xl border border-[var(--border)] p-5 space-y-6">
                   <Section icon={<Volume2 size={12} />} title="Audio & Speed" delay={150}>
+                  <Section
+  icon={<SlidersHorizontal size={12} />}
+  title="Adjustments"
+  delay={175}
+>
+  <div className="space-y-5">
+
+    {/* Brightness */}
+    <div className="space-y-2">
+      <div className="flex items-center justify-between text-xs">
+        <span>Brightness</span>
+
+        <button
+          type="button"
+          onClick={() => updateRecipe({ brightness: 0 })}
+          className="text-film-500 hover:underline"
+        >
+          Reset
+        </button>
+      </div>
+
+      <input
+        type="range"
+        min="-1"
+        max="1"
+        step="0.1"
+        value={recipe.brightness}
+        onChange={(e) =>
+          updateRecipe({
+            brightness: Number(e.target.value),
+          })
+        }
+        className="w-full"
+      />
+    </div>
+
+    {/* Contrast */}
+    <div className="space-y-2">
+      <div className="flex items-center justify-between text-xs">
+        <span>Contrast</span>
+
+        <button
+          type="button"
+          onClick={() => updateRecipe({ contrast: 1 })}
+          className="text-film-500 hover:underline"
+        >
+          Reset
+        </button>
+      </div>
+
+      <input
+        type="range"
+        min="0"
+        max="2"
+        step="0.1"
+        value={recipe.contrast}
+        onChange={(e) =>
+          updateRecipe({
+            contrast: Number(e.target.value),
+          })
+        }
+        className="w-full"
+      />
+    </div>
+
+    {/* Saturation */}
+    <div className="space-y-2">
+      <div className="flex items-center justify-between text-xs">
+        <span>Saturation</span>
+
+        <button
+          type="button"
+          onClick={() => updateRecipe({ saturation: 1 })}
+          className="text-film-500 hover:underline"
+        >
+          Reset
+        </button>
+      </div>
+
+      <input
+        type="range"
+        min="0"
+        max="3"
+        step="0.1"
+        value={recipe.saturation}
+        onChange={(e) =>
+          updateRecipe({
+            saturation: Number(e.target.value),
+          })
+        }
+        className="w-full"
+      />
+    </div>
+
+  </div>
+</Section>
                     <AudioSpeedControl recipe={recipe} onChange={updateRecipe} />
                   </Section>
                   <Section icon={<SlidersHorizontal size={12} />} title="Export quality" delay={200}>
