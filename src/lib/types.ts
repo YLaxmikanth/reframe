@@ -57,7 +57,7 @@ export const DEFAULT_RECIPE: EditRecipe = {
 };
 
 export const MAX_FILE_SIZE =
-  2 * 1024 * 1024 * 1024; // 2GB
+  2 * 1024 * 1024 * 1024;
 
 export const WARNING_FILE_SIZE =
-  500 * 1024 * 1024; // 500MB
+  500 * 1024 * 1024;
