@@ -13,17 +13,30 @@ import {
 const DEFAULT_TITLE =
   "Reframe — Resize, trim, and export videos in your browser";
 
-function getVideoDuration(file: File): Promise<number> {
+export function extractMetadata(
+  file: File
+): Promise<{
+  width: number;
+  height: number;
+  duration: number;
+}> {
   return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+
     const video = document.createElement("video");
+
     video.preload = "metadata";
 
-    const url = URL.createObjectURL(file);
-    video.src = url;
-
     video.onloadedmetadata = () => {
+      resolve({
+        width: video.videoWidth,
+        height: video.videoHeight,
+        duration: isFinite(video.duration)
+          ? video.duration
+          : 0,
+      });
+
       URL.revokeObjectURL(url);
-      resolve(isFinite(video.duration) ? video.duration : 0);
     };
 
     video.onerror = () => {
@@ -35,10 +48,14 @@ function getVideoDuration(file: File): Promise<number> {
         )
       );
     };
+
+    video.src = url;
   });
 }
 
-function verifyMagicBytes(file: File): Promise<boolean> {
+function verifyMagicBytes(
+  file: File
+): Promise<boolean> {
   return new Promise((resolve) => {
     const reader = new FileReader();
 
@@ -48,21 +65,26 @@ function verifyMagicBytes(file: File): Promise<boolean> {
         return;
       }
 
-      const arr = new Uint8Array(e.target.result as ArrayBuffer);
+      const arr = new Uint8Array(
+        e.target.result as ArrayBuffer
+      );
 
       const hex = Array.from(arr)
-        .map((b) => b.toString(16).padStart(2, "0"))
+        .map((b) =>
+          b.toString(16).padStart(2, "0")
+        )
         .join("")
         .toUpperCase();
 
       const ascii = String.fromCharCode(...arr);
 
-      // WebM / MKV
       if (hex.startsWith("1A45DFA3")) resolve(true);
-      // AVI
-      else if (hex.startsWith("52494646")) resolve(true);
-      // MP4 / MOV
-      else if (ascii.substring(0, 12).includes("ftyp")) resolve(true);
+      else if (hex.startsWith("52494646"))
+        resolve(true);
+      else if (
+        ascii.substring(0, 12).includes("ftyp")
+      )
+        resolve(true);
       else resolve(false);
     };
 
@@ -73,8 +95,11 @@ function verifyMagicBytes(file: File): Promise<boolean> {
 }
 
 export function useVideoEditor() {
-  const [file, setFile] = useState<File | null>(null);
-  const [duration, setDuration] = useState<number>(0);
+  const [file, setFile] =
+    useState<File | null>(null);
+
+  const [duration, setDuration] =
+    useState<number>(0);
 
   const [recipe, setRecipe] =
     useState<EditRecipe>(DEFAULT_RECIPE);
@@ -82,12 +107,14 @@ export function useVideoEditor() {
   const [status, setStatus] =
     useState<ExportStatus>("idle");
 
-  const [progress, setProgress] = useState(0);
+  const [progress, setProgress] =
+    useState(0);
 
   const [result, setResult] =
     useState<ExportResult | null>(null);
 
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] =
+    useState<string | null>(null);
 
   const exportAbortControllerRef =
     useRef<AbortController | null>(null);
@@ -119,11 +146,13 @@ export function useVideoEditor() {
         ".mkv",
       ];
 
-      const name = selectedFile.name.toLowerCase();
+      const name =
+        selectedFile.name.toLowerCase();
 
-      const hasValidExtension = validExtensions.some((ext) =>
-        name.endsWith(ext)
-      );
+      const hasValidExtension =
+        validExtensions.some((ext) =>
+          name.endsWith(ext)
+        );
 
       if (!hasValidExtension) {
         setError(
@@ -133,10 +162,15 @@ export function useVideoEditor() {
         );
 
         setStatus("error");
+
         return;
       }
 
-      if (!selectedFile.type.startsWith("video/")) {
+      if (
+        !selectedFile.type.startsWith(
+          "video/"
+        )
+      ) {
         setError(
           `Layer 2 Validation Failed: Invalid MIME type. Expected video/*, got ${
             selectedFile.type || "unknown"
@@ -144,10 +178,14 @@ export function useVideoEditor() {
         );
 
         setStatus("error");
+
         return;
       }
 
-      const isVideo = await verifyMagicBytes(selectedFile);
+      const isVideo =
+        await verifyMagicBytes(
+          selectedFile
+        );
 
       if (!isVideo) {
         setError(
@@ -155,13 +193,18 @@ export function useVideoEditor() {
         );
 
         setStatus("error");
+
         return;
       }
 
       try {
-        const dur = await getVideoDuration(selectedFile);
+        const { duration: dur } =
+          await extractMetadata(
+            selectedFile
+          );
 
         setDuration(dur);
+
         setFile(selectedFile);
 
         setRecipe((prev) => ({
@@ -172,7 +215,9 @@ export function useVideoEditor() {
       } catch (err) {
         setError(
           `Layer 4 Validation Failed: ${
-            err instanceof Error ? err.message : "Unknown error"
+            err instanceof Error
+              ? err.message
+              : "Unknown error"
           }`
         );
 
@@ -182,64 +227,89 @@ export function useVideoEditor() {
     []
   );
 
-  const handleExport = useCallback(async () => {
-    if (!file) return;
+  const handleExport = useCallback(
+    async () => {
+      if (!file) return;
 
-    const abortController = new AbortController();
+      const abortController =
+        new AbortController();
 
-    exportAbortControllerRef.current = abortController;
-    exportCancelledRef.current = false;
+      exportAbortControllerRef.current =
+        abortController;
 
-    try {
-      setStatus("loading-engine");
-      setProgress(0);
-      setError(null);
-      setResult(null);
+      exportCancelledRef.current = false;
 
-      const ffmpeg = await loadFFmpeg(
-        abortController.signal
-      );
+      try {
+        setStatus("loading-engine");
+        setProgress(0);
+        setError(null);
+        setResult(null);
 
-      if (exportCancelledRef.current) return;
+        const ffmpeg =
+          await loadFFmpeg(
+            abortController.signal
+          );
 
-      setStatus("exporting");
+        if (
+          exportCancelledRef.current
+        )
+          return;
 
-      const exportResult = await exportVideo(
-        ffmpeg,
-        file,
-        recipe,
-        setProgress,
-        abortController.signal
-      );
+        setStatus("exporting");
 
-      if (exportCancelledRef.current) return;
+        const exportResult =
+          await exportVideo(
+            ffmpeg,
+            file,
+            recipe,
+            setProgress,
+            abortController.signal
+          );
 
-      setResult(exportResult);
-      setStatus("done");
-    } catch (err) {
-      if (exportCancelledRef.current) return;
+        if (
+          exportCancelledRef.current
+        )
+          return;
 
-      console.error("export failed:", err);
+        setResult(exportResult);
 
-      if (err instanceof FFmpegLoadError) {
-        setError(err.message);
-      } else {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "something went wrong"
+        setStatus("done");
+      } catch (err) {
+        if (
+          exportCancelledRef.current
+        )
+          return;
+
+        console.error(
+          "export failed:",
+          err
         );
-      }
 
-      setStatus("error");
-    } finally {
-      if (
-        exportAbortControllerRef.current === abortController
-      ) {
-        exportAbortControllerRef.current = null;
+        if (
+          err instanceof FFmpegLoadError
+        ) {
+          setError(err.message);
+        } else {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "something went wrong"
+          );
+        }
+
+        setStatus("error");
+      } finally {
+        if (
+          exportAbortControllerRef.current ===
+          abortController
+        ) {
+          exportAbortControllerRef.current =
+            null;
+        }
       }
-    }
-  }, [file, recipe]);
+    },
+    [file, recipe]
+  );
 
   useEffect(() => {
     if (file) {
@@ -254,7 +324,9 @@ export function useVideoEditor() {
   }, [file]);
 
   useEffect(() => {
-    const handleKeydown = (e: KeyboardEvent) => {
+    const handleKeydown = (
+      e: KeyboardEvent
+    ) => {
       if (
         (e.ctrlKey || e.metaKey) &&
         e.key === "Enter" &&
@@ -265,7 +337,10 @@ export function useVideoEditor() {
       }
     };
 
-    document.addEventListener("keydown", handleKeydown);
+    document.addEventListener(
+      "keydown",
+      handleKeydown
+    );
 
     return () => {
       document.removeEventListener(
@@ -279,7 +354,9 @@ export function useVideoEditor() {
     exportCancelledRef.current = true;
 
     exportAbortControllerRef.current?.abort();
-    exportAbortControllerRef.current = null;
+
+    exportAbortControllerRef.current =
+      null;
 
     terminateFFmpeg();
 
@@ -303,26 +380,37 @@ export function useVideoEditor() {
   }, []);
 
   useEffect(() => {
-    if (process.env.NODE_ENV !== "development") return;
-    if (status !== "exporting") return;
+    if (
+      process.env.NODE_ENV !==
+      "development"
+    )
+      return;
+
+    if (status !== "exporting")
+      return;
 
     const interval = setInterval(() => {
       const mem = (
         performance as Performance & {
-          memory?: { usedJSHeapSize: number };
+          memory?: {
+            usedJSHeapSize: number;
+          };
         }
       ).memory;
 
       if (mem) {
         console.log(
           "[Reframe Memory]",
-          Math.round(mem.usedJSHeapSize / 1e6),
+          Math.round(
+            mem.usedJSHeapSize / 1e6
+          ),
           "MB used"
         );
       }
     }, 1000);
 
-    return () => clearInterval(interval);
+    return () =>
+      clearInterval(interval);
   }, [status]);
 
   return {
