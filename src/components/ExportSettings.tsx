@@ -1,17 +1,22 @@
 "use client";
 
-import { SlidersHorizontal } from "lucide-react";
+import { EditRecipe } from "@/lib/types";
+import {
+  SlidersHorizontal,
+  Info as InfoIcon,
+} from "lucide-react";
 
 import {
   estimateExportSize,
   formatEstimatedSize,
 } from "@/lib/exportEstimate";
-import { EditRecipe } from "@/lib/types";
 
 interface Props {
   recipe: EditRecipe;
   duration: number;
-  onChange: (patch: Partial<EditRecipe>) => void;
+  onChange: (
+    patch: Partial<EditRecipe>
+  ) => void;
 }
 
 export default function ExportSettings({
@@ -23,12 +28,16 @@ export default function ExportSettings({
     recipe.quality <= 21
       ? "High"
       : recipe.quality <= 25
-        ? "Balanced"
-        : "Small file";
+      ? "Balanced"
+      : "Small file";
 
-  const estimatedSize = formatEstimatedSize(
-    estimateExportSize(recipe, duration)
-  );
+  const estimatedSize =
+    formatEstimatedSize(
+      estimateExportSize(
+        recipe,
+        duration
+      )
+    );
 
   return (
     <div>
@@ -38,7 +47,15 @@ export default function ExportSettings({
           className="text-[10px] font-heading font-semibold uppercase tracking-wider text-[var(--muted)] flex items-center gap-1"
         >
           <SlidersHorizontal size={10} />
+
           Quality
+
+          <span
+            className="cursor-help"
+            title="CRF (Constant Rate Factor): lower = higher quality, larger file. 18 = best quality, 30 = smallest file."
+          >
+            <InfoIcon size={14} />
+          </span>
         </label>
 
         <span className="text-sm font-heading font-bold text-film-600">
@@ -57,7 +74,13 @@ export default function ExportSettings({
         max={30}
         step={1}
         value={recipe.quality}
-        onChange={(e) => onChange({ quality: Number(e.target.value) })}
+        onChange={(e) =>
+          onChange({
+            quality: Number(
+              e.target.value
+            ),
+          })
+        }
         aria-label="Video export quality (CRF)"
         aria-valuetext={`${label} quality, CRF value ${recipe.quality}`}
         className="w-full accent-film-600 cursor-pointer"
