@@ -17,6 +17,26 @@ export interface EditRecipe {
   soundOnCompletion: boolean;
 }
 
+export type OverlayPosition =
+  | "top-left"
+  | "top-right"
+  | "bottom-left"
+  | "bottom-right";
+
+export interface ImageOverlayOptions {
+  file: File | null;
+  position: OverlayPosition;
+  size: number;
+  opacity: number;
+}
+
+export interface BackgroundMusicOptions {
+  file: File | null;
+  musicVolume: number;
+  originalAudioVolume: number;
+  loopMusic: boolean;
+}
+
 export interface ExportResult {
   blobUrl: string;
   size: number;
@@ -66,4 +86,4 @@ export const MAX_FILE_SIZE =
   2 * 1024 * 1024 * 1024;
 
 export const WARNING_FILE_SIZE =
-  500 * 1024 * 1024;
+  500 * 1024 * 1024; // 500MB
