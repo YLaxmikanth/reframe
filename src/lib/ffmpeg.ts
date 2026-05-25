@@ -4,11 +4,6 @@ import { buildTextFilter } from "./text-overlay";
 
 export class FFmpegLoadError extends Error {}
 
-const FFMPEG_WORKER_URL =
-  typeof window !== "undefined"
-    ? new URL("./ffmpeg.worker.ts", import.meta.url)
-    : null;
-
 type SerializedFile = {
   name: string;
   type: string;
@@ -61,11 +56,13 @@ let pendingExport: {
 let pendingProgress: ((percent: number) => void) | null = null;
 
 function createWorker(): Worker {
-  if (!FFMPEG_WORKER_URL) {
+  if (typeof window === "undefined") {
     throw new Error("Web Workers are not available in this environment.");
   }
 
-  ffmpegWorker = new Worker(FFMPEG_WORKER_URL, { type: "module" });
+  ffmpegWorker = new Worker(new URL("./ffmpeg.worker.entry.js", import.meta.url), {
+    type: "module",
+  });
   ffmpegWorker.onmessage = handleWorkerMessage;
   ffmpegWorker.onerror = (event) => {
     const message = event.message || "FFmpeg worker error";
