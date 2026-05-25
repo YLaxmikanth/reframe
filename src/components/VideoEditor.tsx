@@ -20,6 +20,7 @@ import ImageOverlay from "./ImageOverlay"
 import { getPresetById } from "@/lib/presets";
 
 import { cn } from "@/lib/utils";
+import TimelinePanel from "./TimelinePanel";
 import {
   Layers, Crop, Scissors, RotateCw, Volume2, Type,
   SlidersHorizontal, Zap, AlertTriangle, Github, Copy
@@ -207,6 +208,9 @@ export default function VideoEditor() {
     overlayPosition, setOverlayPosition,
     overlaySize, setOverlaySize,
     overlayOpacity, setOverlayOpacity,
+    timelineState,
+    restoreSnapshot,
+    clearTimelineHistory,
     recommendedPreset,
     currentTime,
     toggleSound,
@@ -680,6 +684,12 @@ export default function VideoEditor() {
                 </button>
               </div>
             </div>
+
+            <TimelinePanel
+              timelineState={timelineState}
+              onRestore={restoreSnapshot}
+              onClearHistory={clearTimelineHistory}
+            />
 
             <KeyboardShortcutsPanel />
 

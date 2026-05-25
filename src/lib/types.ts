@@ -42,6 +42,46 @@ export type OverlayPosition =
   | "bottom-left"
   | "bottom-right";
 
+export type TimelineEventType =
+  | "prompt"
+  | "edit"
+  | "transform"
+  | "snapshot"
+  | "restore";
+
+export interface TimelineEvent {
+  id: string;
+  timestamp: number;
+  type: TimelineEventType;
+  label: string;
+  payload?: unknown;
+  snapshotId?: string;
+}
+
+export interface TimelineSnapshot {
+  id: string;
+  timestamp: number;
+  label: string;
+  recipe: EditRecipe;
+  audioSettings: {
+    musicVolume: number;
+    originalAudioVolume: number;
+    loopMusic: boolean;
+  };
+  overlaySettings: {
+    position: OverlayPosition;
+    size: number;
+    opacity: number;
+  };
+}
+
+export interface PersistedTimelineState {
+  version: number;
+  events: TimelineEvent[];
+  snapshots: TimelineSnapshot[];
+  activeSnapshotId?: string;
+}
+
 export interface ImageOverlayOptions {
   file: File | null;
   position: OverlayPosition;

@@ -7,6 +7,15 @@ import { getPresetById } from "@/lib/presets";
 import { loadFFmpeg, exportVideo, terminateFFmpeg, FFmpegLoadError } from "@/lib/ffmpeg";
 import { suggestPreset } from "@/lib/presetSuggestion";
 import { validateDimensions, getDownscaledDimensions } from "@/utils/video-validation";
+import {
+  loadPersistedTimelineState,
+  savePersistedTimelineState,
+  createTimelineSnapshot,
+  createTimelineEvent,
+  appendTimelineEvent,
+  defaultTimelineState,
+  getLastSnapshot,
+} from "@/lib/sessionTimeline";
 
 const DEFAULT_TITLE = "Reframe — Resize, trim, and export videos in your browser";
   const STORAGE_KEY = "reframe:recipe";
@@ -131,6 +140,25 @@ function decodeRecipe(encoded: string): Partial<EditRecipe> | null {
   }
 }
 
+function getTimelineLabelForPatch(patch: Partial<EditRecipe>): string {
+  if (patch.trimStart !== undefined || patch.trimEnd !== undefined) {
+    return "Trim updated";
+  }
+  if (patch.rotate !== undefined || patch.framing !== undefined || patch.preset !== undefined || patch.customWidth !== undefined || patch.customHeight !== undefined) {
+    return "Transform updated";
+  }
+  if (patch.brightness !== undefined || patch.contrast !== undefined || patch.saturation !== undefined || patch.speed !== undefined) {
+    return "Filter or speed updated";
+  }
+  if (patch.format !== undefined || patch.quality !== undefined || patch.keepAudio !== undefined || patch.normalizeAudio !== undefined) {
+    return "Export settings updated";
+  }
+  if (patch.textOverlays !== undefined) {
+    return "Text overlay updated";
+  }
+  return "Editor updated";
+}
+
 export function useVideoEditor() {
   const [file, setFile] = useState<File | null>(null);
   const [duration, setDuration] = useState<number>(0);
@@ -141,18 +169,43 @@ export function useVideoEditor() {
   } | null>(null);
   const [recipe, setRecipe] = useState<EditRecipe>(() => {
     if (typeof window === "undefined") return { ...DEFAULT_RECIPE };
+
     const params = new URLSearchParams(window.location.search);
     const encoded = params.get("settings");
     if (encoded) {
       const decoded = decodeRecipe(encoded);
       if (decoded) return { ...DEFAULT_RECIPE, ...decoded };
     }
+
+    const timeline = loadPersistedTimelineState();
+    if (timeline?.snapshots.length) {
+      const lastSnapshot = timeline.snapshots[timeline.snapshots.length - 1];
+      if (isValidRecipe(lastSnapshot.recipe)) {
+        return lastSnapshot.recipe;
+      }
+    }
+
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (isValidRecipe(parsed)) {
+          return parsed;
+        }
+      }
+    } catch {
+      // ignore parse/validation errors
+    }
+
     return {
       ...DEFAULT_RECIPE,
       soundOnCompletion:
-        typeof window !== "undefined" &&
         localStorage.getItem("soundOnCompletion") === "true",
     };
+  });
+  const [timelineState, setTimelineState] = useState(() => {
+    if (typeof window === "undefined") return defaultTimelineState();
+    return loadPersistedTimelineState() ?? defaultTimelineState();
   });
   const [status, setStatus] = useState<ExportStatus>("idle");
   const [progress, setProgress] = useState(0);
@@ -174,16 +227,41 @@ export function useVideoEditor() {
   const [overlaySize, setOverlaySize] = useState(150);
   const [overlayOpacity, setOverlayOpacity] = useState(100);
   const [currentTime, setCurrentTime] = useState(0);
- const updateRecipe = useCallback((patch: Partial<EditRecipe>) => {
-  setRecipe((prev) => {
-    const next = { ...prev, ...patch };
-    // GIF has no audio — force keepAudio off
-    if (next.format === "gif") {
-      next.keepAudio = false;
-    }
-    return next;
-  });
-}, []);
+
+  const updateRecipe = useCallback((patch: Partial<EditRecipe>) => {
+    setRecipe((prev) => {
+      const next = { ...prev, ...patch };
+      if (next.format === "gif") {
+        next.keepAudio = false;
+      }
+
+      const label = getTimelineLabelForPatch(patch);
+      const snapshot = createTimelineSnapshot(
+        next,
+        {
+          musicVolume,
+          originalAudioVolume,
+          loopMusic,
+        },
+        {
+          position: overlayPosition,
+          size: overlaySize,
+          opacity: overlayOpacity,
+        },
+        label
+      );
+
+      setTimelineState((prevTimeline) =>
+        appendTimelineEvent(
+          prevTimeline,
+          createTimelineEvent("edit", label, patch, snapshot.id),
+          snapshot
+        )
+      );
+
+      return next;
+    });
+  }, [musicVolume, originalAudioVolume, loopMusic, overlayPosition, overlaySize, overlayOpacity]);
   const isValidValue = (key: keyof EditRecipe, val: any): boolean => {
     switch (key) {
       case "preset":
@@ -222,7 +300,7 @@ export function useVideoEditor() {
     try {
       const params = new URLSearchParams(window.location.search);
       const recipeKeys = Object.keys(DEFAULT_RECIPE) as Array<keyof EditRecipe>;
-      const hasRecipeParams = recipeKeys.some(key => params.has(key));
+      const hasRecipeParams = recipeKeys.some((key) => params.has(key));
 
       if (hasRecipeParams) {
         const updatedPatch: Partial<EditRecipe> = {};
@@ -247,13 +325,21 @@ export function useVideoEditor() {
         });
 
         if (Object.keys(updatedPatch).length > 0) {
-          setRecipe(prev => ({
+          setRecipe((prev) => ({
             ...prev,
-            ...updatedPatch
+            ...updatedPatch,
           }));
         }
       } else {
-        // Try full recipe restore first (new key)
+        const timeline = loadPersistedTimelineState();
+        if (timeline?.snapshots.length) {
+          const lastSnapshot = timeline.snapshots[timeline.snapshots.length - 1];
+          if (isValidRecipe(lastSnapshot.recipe)) {
+            setRecipe(lastSnapshot.recipe);
+            return;
+          }
+        }
+
         try {
           const raw = localStorage.getItem(STORAGE_KEY);
           if (raw) {
@@ -267,7 +353,6 @@ export function useVideoEditor() {
           // ignore parse/validation errors and fall back to legacy
         }
 
-        // Legacy partial settings (keep for backward compatibility)
         const saved = localStorage.getItem("reframe-settings");
         if (saved) {
           const parsed = JSON.parse(saved);
@@ -275,7 +360,7 @@ export function useVideoEditor() {
             const n = Number(val);
             return Number.isFinite(n) && n >= 16 && n <= 7680 ? n : fallback;
           };
-          setRecipe(prev => ({
+          setRecipe((prev) => ({
             ...prev,
             preset: parsed.preset ?? prev.preset,
             quality: parsed.quality ?? prev.quality,
@@ -285,7 +370,7 @@ export function useVideoEditor() {
           }));
         }
       }
-    } catch (e) {
+    } catch {
       // ignore
     }
   }, []);
@@ -345,6 +430,12 @@ export function useVideoEditor() {
     }, 500);
     return () => clearTimeout(timer);
   }, [recipe]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const timer = setTimeout(() => savePersistedTimelineState(timelineState), 500);
+    return () => clearTimeout(timer);
+  }, [timelineState]);
 
   const recommendedPreset = useMemo(() => {
     if (!videoMetadata) return null;
@@ -418,19 +509,43 @@ export function useVideoEditor() {
       setRecipe((prev) => {
         const suggestedPreset = suggestPreset(width, height);
         const shouldApplySuggestion = prev.preset === DEFAULT_RECIPE.preset;
-
-        return {
+        const next = {
           ...prev,
           trimStart: 0,
           trimEnd: null,
           ...(shouldApplySuggestion ? { preset: suggestedPreset } : {}),
         };
+
+        const snapshot = createTimelineSnapshot(
+          next,
+          {
+            musicVolume,
+            originalAudioVolume,
+            loopMusic,
+          },
+          {
+            position: overlayPosition,
+            size: overlaySize,
+            opacity: overlayOpacity,
+          },
+          "Video uploaded"
+        );
+
+        setTimelineState((prevTimeline) =>
+          appendTimelineEvent(
+            prevTimeline,
+            createTimelineEvent("snapshot", "Video uploaded", { fileName: selectedFile.name }, snapshot.id),
+            snapshot
+          )
+        );
+
+        return next;
       });
     } catch (err) {
       setError(`Layer 4 Validation Failed: ${err instanceof Error ? err.message : "Unknown error"}`);
       setStatus("error");
     }
-  }, []);
+  }, [musicVolume, originalAudioVolume, loopMusic, overlayPosition, overlaySize, overlayOpacity]);
 
   const handleExport = useCallback(async () => {
     if (!file) return;
@@ -618,14 +733,70 @@ export function useVideoEditor() {
     };
   }, []);
 
+  const clearTimelineHistory = useCallback(() => {
+    setTimelineState(defaultTimelineState());
+  }, []);
+
+  const restoreSnapshot = useCallback(
+    (eventId: string) => {
+      const event = timelineState.events.find((item) => item.id === eventId);
+      const snapshot = event?.snapshotId
+        ? timelineState.snapshots.find((item) => item.id === event.snapshotId)
+        : null;
+
+      if (!snapshot) return;
+
+      setRecipe(snapshot.recipe);
+      setMusicVolume(snapshot.audioSettings.musicVolume);
+      setOriginalAudioVolume(snapshot.audioSettings.originalAudioVolume);
+      setLoopMusic(snapshot.audioSettings.loopMusic);
+      setOverlayPosition(snapshot.overlaySettings.position);
+      setOverlaySize(snapshot.overlaySettings.size);
+      setOverlayOpacity(snapshot.overlaySettings.opacity);
+
+      setTimelineState((prevTimeline) =>
+        appendTimelineEvent(
+          prevTimeline,
+          createTimelineEvent("restore", `Restored: ${snapshot.label}`, {
+            restoredSnapshotId: snapshot.id,
+          }, snapshot.id)
+        )
+      );
+    },
+    [timelineState]
+  );
+
   const resetSettings = useCallback(() => {
+    const snapshot = createTimelineSnapshot(
+      DEFAULT_RECIPE,
+      {
+        musicVolume,
+        originalAudioVolume,
+        loopMusic,
+      },
+      {
+        position: overlayPosition,
+        size: overlaySize,
+        opacity: overlayOpacity,
+      },
+      "Reset settings"
+    );
+
     setRecipe(DEFAULT_RECIPE);
+    setTimelineState((prevTimeline) =>
+      appendTimelineEvent(
+        prevTimeline,
+        createTimelineEvent("snapshot", "Reset settings", null, snapshot.id),
+        snapshot
+      )
+    );
+
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch {
       // ignore
     }
-  }, []);
+  }, [musicVolume, originalAudioVolume, loopMusic, overlayPosition, overlaySize, overlayOpacity]);
 
   const cancelExport = useCallback(() => {
     exportCancelledRef.current = true;
@@ -712,6 +883,9 @@ export function useVideoEditor() {
     setOverlaySize,
     overlayOpacity,
     setOverlayOpacity,
+    timelineState,
+    restoreSnapshot,
+    clearTimelineHistory,
     recommendedPreset,
     currentTime,
     toggleSound,
