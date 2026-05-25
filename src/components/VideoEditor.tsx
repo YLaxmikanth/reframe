@@ -24,6 +24,7 @@ import {
   Layers, Crop, Scissors, RotateCw, Volume2, Type,
   SlidersHorizontal, Zap, AlertTriangle, Github, Copy
 } from "lucide-react";
+import { formatBytes } from "@/lib/fileSizeRisk";
 import OnboardingTour from "./OnboardingTour";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 
@@ -210,6 +211,7 @@ export default function VideoEditor() {
     recommendedPreset,
     currentTime,
     toggleSound,
+    fileRisk,
   } = useVideoEditor();
 
   useKeyboardShortcuts({
@@ -237,6 +239,12 @@ export default function VideoEditor() {
 
   const toggleSection = (key: keyof typeof openSections) =>
     setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+  const [warningDismissed, setWarningDismissed] = useState(false);
+
+  // Reset dismissal when a new file is loaded
+  useEffect(() => {
+    setWarningDismissed(false);
+  }, [file?.name]);
   const downloadRef = useRef<HTMLDivElement>(null);
 
   /**
@@ -405,10 +413,33 @@ export default function VideoEditor() {
               )}
             </div>
 
-            {file && file.size > 100 * 1024 * 1024 && (
-              <p className="text-[var(--warning)] text-sm">
-                ⚠️ Large file - processing may take several minutes
-              </p>
+            {file && fileRisk !== "safe" && !warningDismissed && (
+              <div
+                role="status"
+                aria-live="polite"
+                className="flex items-start gap-3 p-4 bg-film-50 border border-film-200 rounded-xl text-film-800 text-sm animate-fade-in"
+              >
+                <AlertTriangle size={18} className="shrink-0 mt-0.5 text-film-500" />
+                <div className="flex-1">
+                  <p className="font-heading font-bold text-sm">
+                    {fileRisk === "very-large" ? "Very large file detected" : "Large file detected"}
+                    {file ? ` (${formatBytes(file.size)})` : ""}
+                  </p>
+                  <p className="text-film-600 text-sm mt-1">
+                    Browser-based FFmpeg processing may be slow or fail due to memory limits. For best results, use files under 500 MB. Export is still available but may take longer or fail.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setWarningDismissed(true)}
+                    className="px-3 py-1.5 bg-[var(--border)] border border-[var(--border)] rounded-lg text-sm font-semibold hover:opacity-80 transition-colors whitespace-nowrap"
+                    aria-label="Dismiss large file warning"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
             )}
             {file && (
               <div className={cn(

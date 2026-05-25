@@ -5,6 +5,7 @@ import { EditRecipe, ExportResult, ExportStatus, MAX_FILE_SIZE, OverlayPosition,
 import { DEFAULT_RECIPE, SPEED_STEPS } from "@/lib/constants";
 import { getPresetById } from "@/lib/presets";
 import { loadFFmpeg, exportVideo, terminateFFmpeg, FFmpegLoadError } from "@/lib/ffmpeg";
+import { analyzeFileRisk, FileRiskLevel } from "@/lib/fileSizeRisk";
 import { suggestPreset } from "@/lib/presetSuggestion";
 import { validateDimensions, getDownscaledDimensions } from "@/utils/video-validation";
 
@@ -159,6 +160,7 @@ export function useVideoEditor() {
   const [result, setResult] = useState<ExportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fileError, setFileError] = useState("");
+  const [fileRisk, setFileRisk] = useState<FileRiskLevel>("safe");
   const [exportStartedAt, setExportStartedAt] = useState<number | null>(null);
   const exportAbortControllerRef = useRef<AbortController | null>(null);
   const exportCancelledRef = useRef(false);
@@ -395,6 +397,17 @@ export function useVideoEditor() {
 
     try {
       const { width, height, duration: dur } = await extractMetadata(selectedFile);
+
+      // Analyze file risk (optional device memory if available)
+      try {
+        const deviceMemory = typeof navigator !== "undefined" && (navigator as any).deviceMemory;
+        const deviceMemoryGb = typeof deviceMemory === "number" ? deviceMemory : undefined;
+        const risk = analyzeFileRisk(selectedFile, { deviceMemoryGb });
+        setFileRisk(risk);
+      } catch (e) {
+        // Non-fatal: keep default 'safe' on analysis failure
+        setFileRisk("safe");
+      }
 
       // Layer 5: Resolution check
       const dimensionCheck = validateDimensions(width, height);
@@ -715,5 +728,6 @@ export function useVideoEditor() {
     recommendedPreset,
     currentTime,
     toggleSound,
+    fileRisk,
   };
 }
