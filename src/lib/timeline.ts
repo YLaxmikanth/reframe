@@ -66,7 +66,6 @@ export function addTrackToTimeline(
   const videoTrackCount = state.timelineTracks.filter(t => t.visible && t.type === "video").length;
   
   if (track.type === "video" && videoTrackCount >= MAX_TRACKS_PHASE_1) {
-    console.warn(`Phase 1 MVP: Max ${MAX_TRACKS_PHASE_1} active video tracks. New track added but hidden.`);
     track.visible = false;
   }
 
