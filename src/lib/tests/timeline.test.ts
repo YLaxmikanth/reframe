@@ -91,9 +91,9 @@ describe("Timeline Track Management", () => {
       const s3 = addTrackToTimeline(s2, track3);
 
       expect(s3.timelineTracks).toHaveLength(3);
-      expect(s3.timelineTracks[0].visible).toBe(true);
-      expect(s3.timelineTracks[1].visible).toBe(true);
-      expect(s3.timelineTracks[2].visible).toBe(false); // Excess hidden
+      expect(s3.timelineTracks[0]!.visible).toBe(true);
+      expect(s3.timelineTracks[1]!.visible).toBe(true);
+      expect(s3.timelineTracks[2]!.visible).toBe(false); // Excess hidden
     });
 
     it("should allow unlimited image tracks", () => {
@@ -122,7 +122,7 @@ describe("Timeline Track Management", () => {
       const s3 = removeTrackFromTimeline(s2, track1.id);
 
       expect(s3.timelineTracks).toHaveLength(1);
-      expect(s3.timelineTracks[0].id).toBe(track2.id);
+      expect(s3.timelineTracks[0]!.id).toBe(track2.id);
     });
 
     it("should clear activeTrackId if active track is removed", () => {
@@ -160,8 +160,8 @@ describe("Timeline Track Management", () => {
         position: { x: 100, y: 200 },
       });
 
-      expect(s2.timelineTracks[0].opacity).toBe(50);
-      expect(s2.timelineTracks[0].position).toEqual({ x: 100, y: 200 });
+      expect(s2.timelineTracks[0]!.opacity).toBe(50);
+      expect(s2.timelineTracks[0]!.position).toEqual({ x: 100, y: 200 });
     });
 
     it("should not affect other tracks", () => {
@@ -173,8 +173,8 @@ describe("Timeline Track Management", () => {
       const s2 = addTrackToTimeline(s1, track2);
       const s3 = updateTrackInTimeline(s2, track1.id, { opacity: 75 });
 
-      expect(s3.timelineTracks[0].opacity).toBe(75);
-      expect(s3.timelineTracks[1].opacity).toBe(100); // unchanged
+      expect(s3.timelineTracks[0]!.opacity).toBe(75);
+      expect(s3.timelineTracks[1]!.opacity).toBe(100); // unchanged
     });
   });
 
@@ -195,9 +195,9 @@ describe("Timeline Track Management", () => {
 
       const sorted = sortTracksByZIndex([track1, track2, track3]);
 
-      expect(sorted[0].zIndex).toBe(0);
-      expect(sorted[1].zIndex).toBe(1);
-      expect(sorted[2].zIndex).toBe(2);
+      expect(sorted[0]!.zIndex).toBe(0);
+      expect(sorted[1]!.zIndex).toBe(1);
+      expect(sorted[2]!.zIndex).toBe(2);
     });
 
     it("should not modify original array", () => {
@@ -208,7 +208,7 @@ describe("Timeline Track Management", () => {
 
       sortTracksByZIndex(tracks);
 
-      expect(tracks[0].zIndex).toBe(2); // original order preserved
+      expect(tracks[0]!.zIndex).toBe(2); // original order preserved
     });
   });
 
@@ -230,7 +230,7 @@ describe("Timeline Track Management", () => {
       const filtered = getVisibleVideoTracks([visible, hidden, noSource]);
 
       expect(filtered).toHaveLength(1);
-      expect(filtered[0].id).toBe(visible.id);
+      expect(filtered[0]!.id).toBe(visible.id);
     });
 
     it("should return sorted by z-index", () => {
@@ -247,8 +247,8 @@ describe("Timeline Track Management", () => {
 
       const filtered = getVisibleVideoTracks([track1, track2]);
 
-      expect(filtered[0].zIndex).toBe(0);
-      expect(filtered[1].zIndex).toBe(1);
+      expect(filtered[0]!.zIndex).toBe(0);
+      expect(filtered[1]!.zIndex).toBe(1);
     });
   });
 
@@ -358,7 +358,7 @@ describe("Timeline Track Management", () => {
 
       const serialized = serializeMultiTrackState(state);
 
-      expect(serialized.timelineTracks[0].source).toBeNull();
+      expect(serialized.timelineTracks[0]!.source).toBeNull();
     });
 
     it("should preserve all other properties", () => {
@@ -370,8 +370,8 @@ describe("Timeline Track Management", () => {
 
       const serialized = serializeMultiTrackState(state);
 
-      expect(serialized.timelineTracks[0].opacity).toBe(75);
-      expect(serialized.timelineTracks[0].position).toEqual({ x: 100, y: 200 });
+      expect(serialized.timelineTracks[0]!.opacity).toBe(75);
+      expect(serialized.timelineTracks[0]!.position).toEqual({ x: 100, y: 200 });
     });
   });
 });

@@ -130,7 +130,7 @@ export function getVisibleVideoTracks(tracks: TimelineTrack[]): TimelineTrack[] 
  */
 export function getBackgroundTrack(tracks: TimelineTrack[]): TimelineTrack | null {
   const visible = getVisibleVideoTracks(tracks);
-  return visible.length > 0 ? visible[0] : null;
+  return visible.length > 0 ? visible[0]! : null;
 }
 
 /**
@@ -197,13 +197,16 @@ export function validateMultiTrackState(state: MultiTrackEditorState): {
 export function serializeMultiTrackState(
   state: MultiTrackEditorState
 ): Omit<MultiTrackEditorState, "timelineTracks"> & {
-  timelineTracks: Omit<TimelineTrack, "source">[];
+  timelineTracks: (Omit<TimelineTrack, "source"> & { source: null })[];
 } {
   return {
     ...state,
-    timelineTracks: state.timelineTracks.map(t => ({
-      ...t,
-      source: null as any, // Files are not serializable
-    })),
+    timelineTracks: state.timelineTracks.map(t => {
+      const { source, ...rest } = t;
+      return {
+        ...rest,
+        source: null,
+      };
+    }),
   };
 }
